@@ -1,0 +1,335 @@
+{
+  "name": "AI Content Creation Automation (Groq) - Form Submission",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Request a Content Post",
+        "formDescription": "Enter a topic and pick a platform — AI will draft a post for you.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Topic",
+              "placeholder": "e.g. Benefits of remote work",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Platform",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "LinkedIn"
+                  },
+                  {
+                    "option": "Twitter"
+                  },
+                  {
+                    "option": "Instagram"
+                  },
+                  {
+                    "option": "Facebook"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "d6691296-edcf-4461-8020-5d857b20828b",
+      "name": "On Form Submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        1872,
+        -96
+      ],
+      "webhookId": "487ab055-ce7c-46c3-b095-1543c711effd"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "prep-1",
+              "name": "topic",
+              "type": "string",
+              "value": "={{ $json.Topic }}"
+            },
+            {
+              "id": "prep-2",
+              "name": "platform",
+              "type": "string",
+              "value": "={{ $json.Platform }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "55e13d8d-3010-4674-972d-b782855e8601",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2096,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "resp-1",
+              "name": "Generated Post",
+              "type": "string",
+              "value": "={{ $('Format Output1').item.json.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e1c04d06-5c14-4722-9b7e-0c75598fd788",
+      "name": "Show Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2976,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"openai/gpt-oss-120b\", temperature: 0.7, max_tokens: 400, messages: [ { role: \"system\", content: \"You are a skilled social media content writer. You write concise, engaging, platform-appropriate posts.\" }, { role: \"user\", content: `Write a ${$json.platform} post (under 200 words) about: \"${$json.topic}\".\\n\\nRequirements:\\n- Strong hook in the first line\\n- Friendly, informative tone\\n- End with a question or call-to-action\\n- No more than 3 hashtags, only if platform is Twitter or Instagram` } ] }) }}",
+        "options": {}
+      },
+      "id": "b77b41a5-d3c2-466b-8632-f77a93c75939",
+      "name": "Generate Content (Groq)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        -96
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "8bVnA1ujBQvrKBsR",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "out-1",
+              "name": "date",
+              "type": "string",
+              "value": "={{ $now.format('yyyy-MM-dd') }}"
+            },
+            {
+              "id": "out-2",
+              "name": "platform",
+              "type": "string",
+              "value": "={{ $('Prepare Data').item.json.platform }}"
+            },
+            {
+              "id": "out-3",
+              "name": "topic",
+              "type": "string",
+              "value": "={{ $('Prepare Data').item.json.topic }}"
+            },
+            {
+              "id": "out-4",
+              "name": "content",
+              "type": "string",
+              "value": "={{ $json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fbc2d2b0-45d2-4c12-a62b-edf0aa9ed7c0",
+      "name": "Format Output1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2544,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UVxnu3GnCP3Bl8iIzqV5mBxrDMfqas7aaYrPMf2LGGo",
+          "mode": "list",
+          "cachedResultName": "Ai content Genration",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UVxnu3GnCP3Bl8iIzqV5mBxrDMfqas7aaYrPMf2LGGo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UVxnu3GnCP3Bl8iIzqV5mBxrDMfqas7aaYrPMf2LGGo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.date }}",
+            "Platform": "={{ $json.platform }}",
+            "Topic": "={{ $json.topic }}",
+            "Content": "={{ $json.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b00854e9-436d-4c37-b95f-99d77f1e893d",
+      "name": "Save to Google Sheets1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2752,
+        -96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Em5udAWH4xh6aVxI",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Content (Groq)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Content (Groq)1": {
+      "main": [
+        [
+          {
+            "node": "Format Output1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Output1": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Show Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5cffe307-332f-4461-b040-22786aa0c1ea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ce71e2939ba86caad95139e413957df511408c15de4236e388c51c72caf37b39"
+  },
+  "nodeGroups": [],
+  "id": "wUOg9MMI3kEOuOFk",
+  "tags": []
+}

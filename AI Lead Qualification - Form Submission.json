@@ -1,0 +1,562 @@
+{
+  "name": "AI Lead Qualification - Form Submission",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Lead Qualification Form",
+        "formDescription": "Tell us about your project and our team will get back to you.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone"
+            },
+            {
+              "fieldLabel": "Budget",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Service",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Timeline",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Message",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "path": "3950425a-4796-4fb7-a08c-93721473a1d2"
+        }
+      },
+      "id": "a3d35526-495d-4312-aa48-e3168aaecd42",
+      "name": "Form Submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -336,
+        -112
+      ],
+      "webhookId": "3950425a-4796-4fb7-a08c-93721473a1d2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "name",
+              "name": "name",
+              "value": "={{ $json.Name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "email",
+              "name": "email",
+              "value": "={{ $json.Email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "company",
+              "name": "company",
+              "value": "={{ $json.Company || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "name": "phone",
+              "value": "={{ $json.Phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "budget",
+              "name": "budget",
+              "value": "={{ $json.Budget || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "service",
+              "name": "service",
+              "value": "={{ $json.Service || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "timeline",
+              "name": "timeline",
+              "value": "={{ $json.Timeline || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "={{ $json.Message || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8943e335-3007-4119-936e-cfe901f5b39f",
+      "name": "Prepare Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-5.6-luna', input: 'You are an expert B2B sales lead qualification agent. Analyze the following potential customer and calculate a lead score from 0 to 100.\\n\\nLead Name: ' + $json.name + '\\nEmail: ' + $json.email + '\\nCompany: ' + $json.company + '\\nPhone: ' + $json.phone + '\\nBudget: ' + $json.budget + '\\nService: ' + $json.service + '\\nTimeline: ' + $json.timeline + '\\nMessage: ' + $json.message + '\\n\\nQualification rules:\\nHOT = 75-100\\nWARM = 40-74\\nCOLD = 0-39\\n\\nReturn ONLY valid JSON with exactly these fields:\\nscore: number\\nqualification: HOT, WARM, or COLD\\nreason: short explanation\\nrecommended_action: recommended sales action' }) }}",
+        "options": {}
+      },
+      "id": "e1f3e4aa-f711-4033-aeb0-0a000126cbf6",
+      "name": "AI Lead Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        -112
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "ngxjvCKvs9709yJT",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\nlet text = response.output_text || '';\n\nif (!text && response.output) {\n  for (const item of response.output) {\n    if (item.content) {\n      for (const content of item.content) {\n        if (content.text) text += content.text;\n      }\n    }\n  }\n}\n\nlet ai;\ntry {\n  ai = JSON.parse(text);\n} catch (error) {\n  ai = {\n    score: 0,\n    qualification: 'COLD',\n    reason: 'AI response could not be parsed.',\n    recommended_action: 'Review lead manually.'\n  };\n}\n\nconst lead = $('Prepare Lead').first().json;\n\nreturn [{\n  json: {\n    ...lead,\n    lead_score: ai.score,\n    qualification: ai.qualification,\n    ai_reason: ai.reason,\n    recommended_action: ai.recommended_action,\n    qualified_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "31efb0ec-d292-4e51-a575-65bbd65fb001",
+      "name": "Lead Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1CqJcJNNZyz3Zm4FhAK5zGLJ0qcowoFrcchkLa_Zlakg",
+          "mode": "list",
+          "cachedResultName": "Leads qual",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CqJcJNNZyz3Zm4FhAK5zGLJ0qcowoFrcchkLa_Zlakg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CqJcJNNZyz3Zm4FhAK5zGLJ0qcowoFrcchkLa_Zlakg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Company": "={{ $json.company }}",
+            "Service": "={{ $json.service }}",
+            "Phone": "={{ $json.phone }}",
+            "Budget": "={{ $json.budget }}",
+            "Timeline": "={{ $json.timeline }}",
+            "Message": "={{ $json.message }}",
+            "Lead score": "={{ $json.lead_score }}",
+            "Recommended Acton": "={{ $json.recommended_action }}",
+            "Qualification": "={{ $json.qualification }}",
+            "Date": "={{ $json.qualified_at }}",
+            "Ai Reason": "={{ $json.ai_reason }}"
+          },
+          "matchingColumns": [
+            "Name"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timeline",
+              "displayName": "Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead score",
+              "displayName": "Lead score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Qualification",
+              "displayName": "Qualification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Recommended Acton",
+              "displayName": "Recommended Acton",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ai Reason",
+              "displayName": "Ai Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "73906aee-4b6d-4e9b-9f29-ba459b54a3ca",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        -112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Em5udAWH4xh6aVxI",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gpt-5.6-luna', input: 'Write a professional personalized sales email to this lead. Do not mention AI, lead scoring, or internal qualification.\\n\\nName: ' + $('Lead Score').first().json.name + '\\nCompany: ' + $('Lead Score').first().json.company + '\\nService requested: ' + $('Lead Score').first().json.service + '\\nMessage: ' + $('Lead Score').first().json.message + '\\n\\nReturn ONLY valid JSON with exactly these fields:\\nsubject: email subject\\nbody: complete email body' }) }}",
+        "options": {}
+      },
+      "id": "03ad8994-7688-44dd-b2cc-a7b05d927341",
+      "name": "Personalized Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -128
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "ngxjvCKvs9709yJT",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json;\nlet text = response.output_text || '';\n\nif (!text && response.output) {\n  for (const item of response.output) {\n    if (item.content) {\n      for (const content of item.content) {\n        if (content.text) text += content.text;\n      }\n    }\n  }\n}\n\nlet email;\ntry {\n  email = JSON.parse(text);\n} catch (error) {\n  email = {\n    subject: 'Thank you for contacting us',\n    body: 'Thank you for your interest. Our team will contact you shortly.'\n  };\n}\n\nconst lead = $('Lead Score').first().json;\n\nreturn [{\n  json: {\n    ...lead,\n    email_subject: email.subject,\n    email_body: email.body\n  }\n}];"
+      },
+      "id": "aee6d1e6-0084-4781-8b18-f8b493278422",
+      "name": "Prepare Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.email_subject }}",
+        "emailType": "text",
+        "message": "={{ $json.email_body }}",
+        "options": {}
+      },
+      "id": "f7d000ae-2d80-4f16-9f52-64e3d8ece2db",
+      "name": "Gmail - Customer",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1472,
+        -112
+      ],
+      "webhookId": "da032b2d-e713-41a2-9415-f77c6ccd28d6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GpUIOXG6TfavqWD5",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "iqbal0555891434@gmail.com",
+        "subject": "={{ 'New ' + $json.qualification + ' Lead - ' + $json.name + ' (' + $json.lead_score + '/100)' }}",
+        "emailType": "text",
+        "message": "={{ 'NEW LEAD QUALIFIED\\n\\nName: ' + $json.name + '\\nEmail: ' + $json.email + '\\nCompany: ' + $json.company + '\\nPhone: ' + $json.phone + '\\nService: ' + $json.service + '\\nBudget: ' + $json.budget + '\\nTimeline: ' + $json.timeline + '\\n\\nLead Score: ' + $json.lead_score + '/100\\nQualification: ' + $json.qualification + '\\n\\nAI Reason:\\n' + $json.ai_reason + '\\n\\nRecommended Action:\\n' + $json.recommended_action }}",
+        "options": {}
+      },
+      "id": "8ed669cc-a74d-4358-82b9-9d993c6e9480",
+      "name": "Gmail - Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        -112
+      ],
+      "webhookId": "856e1dcc-e16b-4fcd-ba7e-aef680cded73",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GpUIOXG6TfavqWD5",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Prepare Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Lead": {
+      "main": [
+        [
+          {
+            "node": "AI Lead Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Lead Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Lead Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Score": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Personalized Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalized Email": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Customer": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "efd5d712-87c0-43cd-b49f-d314aae22161",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ce71e2939ba86caad95139e413957df511408c15de4236e388c51c72caf37b39"
+  },
+  "nodeGroups": [],
+  "id": "6JKLsFJ3NZvCBZ3R",
+  "tags": []
+}
